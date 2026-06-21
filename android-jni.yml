@@ -1,0 +1,40 @@
+.libretro-android-jni:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-android:latest
+  stage: build-shared
+  variables:
+    JNI_PATH: .
+    LIBNAME: ${CORENAME}_libretro_android.so
+    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI
+    STRIP_CORE_LIB: 1
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  script:
+    - $NDK_ROOT/ndk-build --no-print-directory -j$NUMPROC -C $JNI_PATH/jni $PLATFORM_ARGS
+    - mv $JNI_PATH/libs/$ANDROID_ABI/libretro.so $LIBNAME
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then $NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip $LIBNAME; fi
+  artifacts:
+    name: android-$ANDROID_ABI
+    paths:
+      - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-android-jni-armeabi-v7a:
+  extends: .libretro-android-jni
+  variables:
+    ANDROID_ABI: armeabi-v7a
+
+.libretro-android-jni-arm64-v8a:
+  extends: .libretro-android-jni
+  variables:
+    ANDROID_ABI: arm64-v8a
+
+.libretro-android-jni-x86:
+  extends: .libretro-android-jni
+  variables:
+    ANDROID_ABI: x86
+
+.libretro-android-jni-x86_64:
+  extends: .libretro-android-jni
+  variables:
+    ANDROID_ABI: x86_64

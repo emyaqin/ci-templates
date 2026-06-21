@@ -1,0 +1,23 @@
+include:
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/osx-ppc.yml'
+
+.libretro-osx-cmake-ppc:
+  extends: .libretro-osx-ppc
+  variables:
+    platform: osx
+    CC:       powerpc-apple-darwin10-gcc-4.2.1
+    CXX:      powerpc-apple-darwin10-g++-4.2.1
+    ARCH:     ppc
+    BUILD_DIR: build/osx-$ARCH
+    CMAKE: cmake
+    STRIP_CORE_LIB: 1
+    CMAKE_SOURCE_ROOT: .
+  script:
+    - ${CMAKE} $CORE_ARGS "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR -DCMAKE_C_FLAGS="-D__SIZEOF_POINTER__=4 -D__ORDER_BIG_ENDIAN__=4321 -D__BYTE_ORDER__=4321 -D__ORDER_LITTLE_ENDIAN__=1234 -D__PPC__=1 -mmacosx-version-min=10.4 -mcpu=7400 -O2 -maltivec -mabi=altivec" -DCMAKE_CXX_FLAGS="-D__SIZEOF_POINTER__=4 -D__ORDER_BIG_ENDIAN__=4321 -D__BYTE_ORDER__=4321 -D__ORDER_LITTLE_ENDIAN__=1234 -D__PPC__=1 -mmacosx-version-min=10.4 -mcpu=7400 -O2 -maltivec -mabi=altivec" -DCMAKE_SHARED_LINKER_FLAGS="-mmacosx-version-min=10.4 -mcpu=7400 -O2 -maltivec -mabi=altivec"
+    - ${CMAKE} --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro.dylib ]; then mv $BUILD_DIR/$EXTRA_PATH/${CORENAME}_libretro.dylib ${CORENAME}_libretro.dylib; fi
+    - otool -l "${CORENAME}_libretro.dylib" | grep -A3 'LC_VERSION_MIN_MACOSX' || true
+    - otool -l "${CORENAME}_libretro.dylib" | grep -A5 'platform macos' || true
+    - otool -L "${CORENAME}_libretro.dylib" || true

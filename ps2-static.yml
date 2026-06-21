@@ -1,0 +1,30 @@
+.libretro-ps2-static:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-ps2:latest
+  stage: build-static
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=ps2
+    - mv ${MAKEFILE_PATH}/${CORENAME}_libretro_ps2.a retroarch-precompiled/libretro_ps2.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.ps2 release -j$NUMPROC
+    - mv retroarchps2.elf ../${CORENAME}_libretro_ps2.elf
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_ps2.elf
+    expire_in: 10 min
+
+.libretro-ps2-static-retroarch-master:
+  extends: .libretro-ps2-static
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-ps2

@@ -1,0 +1,30 @@
+.libretro-osx-ppc:
+  stage: build-shared
+  rules:
+   - when: never
+  tags:
+   - macosx-legacy
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$((1 + $(sysctl -n hw.ncpu)/5))
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.dylib
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-osx-ppc-make-default:
+  extends: .libretro-osx-ppc
+  variables:
+    platform: osx
+    CC:       powerpc-apple-darwin10-gcc-4.2.1
+    CXX:      powerpc-apple-darwin10-g++-4.2.1
+    CFLAGS:   -mmacosx-version-min=10.4 -mcpu=7400 -O2 -maltivec -mabi=altivec
+    CXXFLAGS: -mmacosx-version-min=10.4 -mcpu=7400 -O2 -maltivec -mabi=altivec
+    LDFLAGS:  -mmacosx-version-min=10.4 -mcpu=7400 -O2 -maltivec -mabi=altivec
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC} arch=ppc
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro.dylib ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro.dylib ${CORENAME}_libretro.dylib; fi

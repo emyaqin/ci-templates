@@ -1,0 +1,61 @@
+.libretro-osx-x64:
+  stage: build-shared
+  tags:
+   - macosx
+  variables:
+    MACOSX_DEPLOYMENT_TARGET: "10.9"
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$((1 + $(sysctl -n hw.ncpu)/5))
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.dylib
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-osx-x64-10-7:
+  stage: build-shared
+  tags:
+   - macosx
+  variables:
+    MACOSX_DEPLOYMENT_TARGET: "10.7"
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$((1 + $(sysctl -n hw.ncpu)/5))
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.dylib
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-osx-x64-make-10-7:
+  extends: .libretro-osx-x64-10-7
+  variables:
+    platform: osx
+    CC:       clang
+    CXX:      clang++
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC}
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro.dylib ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro.dylib ${CORENAME}_libretro.dylib; fi
+    - otool -l "${CORENAME}_libretro.dylib" | grep -A3 'LC_VERSION_MIN_MACOSX' || true
+    - otool -l "${CORENAME}_libretro.dylib" | grep -A5 'platform macos' || true
+    - otool -L "${CORENAME}_libretro.dylib" || true
+
+.libretro-osx-x64-make-default:
+  extends: .libretro-osx-x64
+  variables:
+    platform: osx
+    CC:       clang
+    CXX:      clang++
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC}
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro.dylib ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro.dylib ${CORENAME}_libretro.dylib; fi
+    - otool -l "${CORENAME}_libretro.dylib" | grep -A3 'LC_VERSION_MIN_MACOSX' || true
+    - otool -l "${CORENAME}_libretro.dylib" | grep -A5 'platform macos' || true
+    - otool -L "${CORENAME}_libretro.dylib" || true
+    - lipo -info ${CORENAME}_libretro.dylib
+    - if [ x"$(lipo -info ${CORENAME}_libretro.dylib | grep x86_64)" = x ]; then echo wrong arch; exit 1; fi

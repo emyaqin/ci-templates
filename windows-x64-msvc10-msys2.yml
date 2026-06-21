@@ -1,0 +1,37 @@
+.libretro-windows-x64-msvc10-msys2:
+  tags:
+    - msvc2010
+  stage: build-shared
+  variables:
+    MSYS_BIN_DIR: C:\msys64\usr\bin
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+    LIBNAME: ${CORENAME}_libretro.dll
+  artifacts:
+    paths:
+    - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-windows-x64-msvc10-msys2-make-default:
+  extends: .libretro-windows-x64-msvc10-msys2
+  variables:
+    MSYSTEM:  MINGW64
+    platform: windows_msvc2010_x64
+    ARCH:     x86_64
+    MAKE:     make.exe
+    AR:       ar
+    AS:       as
+    CC:       cl.exe
+    CXX:      cl.exe
+    LD:       link.exe
+    WINDRES:  windres
+  script:
+   - |
+     $ErrorActionPreference = 'Stop'
+     $Env:Path += -join(";", "$Env:MSYS_BIN_DIR")
+     $Env:HOME = "."
+     bash.exe -e -l -c "make -C $Env:MAKEFILE_PATH -f $Env:MAKEFILE"
+     if ($LastExitCode -ne 0){throw "Build failed: make -C $Env:MAKEFILE_PATH -f $Env:MAKEFILE"}
+  after_script:
+    - move-Item "$Env:MAKEFILE_PATH/$Env:LIBNAME" "$Env:LIBNAME" -Force -ErrorAction SilentlyContinue

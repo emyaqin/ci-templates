@@ -1,0 +1,34 @@
+.libretro-wiiu-static-cmake:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-wiiu:latest
+  stage: build-static
+  variables:
+    BUILD_DIR: build/wiiu
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+    - export PATH=$PATH:$DEVKITPPC/bin
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - ls /opt/devkitpro
+    - ls /opt/devkitpro/*
+    - cmake $CORE_ARGS "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DLIBRETRO_STATIC=ON -DLIBRETRO_SUFFIX=_wiiu -DCMAKE_C_FLAGS="-DGEKKO -DWIIU -DHW_RVL -mwup -mcpu=750 -meabi -mhard-float" -DCMAKE_CXX_FLAGS="-DGEKKO -DWIIU -DHW_RVL -mwup -mcpu=750 -meabi -mhard-float" -DCMAKE_C_COMPILER="${DEVKITPPC}/bin/powerpc-eabi-gcc" -DCMAKE_CXX_COMPILER="${DEVKITPPC}/bin/powerpc-eabi-g++"  -DCMAKE_AR="${DEVKITPPC}/bin/powerpc-eabi-ar" -DCMAKE_RANLIB="${DEVKITPPC}/bin/powerpc-eabi-ranlib" -DCMAKE_SYSTEM_PROCESSOR=powerpc -DCMAKE_SYSTEM_NAME=Generic -DCMAKE_CROSSCOMPILING=ON -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=OFF
+    - cmake --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+    - mv $BUILD_DIR/$EXTRA_PATH/${CORENAME}_libretro_wiiu.a retroarch-precompiled/libretro_wiiu.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.wiiu -j$NUMPROC LIBRETRO=${CORENAME}
+    - mv retroarch_wiiu.rpx ../${CORENAME}_libretro.rpx
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.rpx
+    expire_in: 10 min
+
+.libretro-wiiu-static-cmake-retroarch-master:
+  extends: .libretro-wiiu-static-cmake
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-wiiu

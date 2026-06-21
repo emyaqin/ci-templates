@@ -1,0 +1,33 @@
+.libretro-ctr-static-cmake:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-devkitpro:latest
+  stage: build-static
+  variables:
+    BUILD_DIR: build/ctr
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - cmake $CORE_ARGS "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DLIBRETRO_STATIC=ON -DLIBRETRO_SUFFIX=_ctr -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE_DIR}/ctr.cmake
+    - cmake --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+    - mv $BUILD_DIR/$EXTRA_PATH/${CORENAME}_libretro_ctr.a retroarch-precompiled/libretro_ctr.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.ctr -j$NUMPROC USE_CTRULIB_2=1 LIBRETRO=${CORENAME}
+    - mv retroarch_3ds.cia ../${CORENAME}_libretro.cia
+    - mv retroarch_3ds.3dsx ../${CORENAME}_libretro.3dsx
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.cia
+    - ${CORENAME}_libretro.3dsx
+    expire_in: 10 min
+
+.libretro-ctr-static-cmake-retroarch-master:
+  extends: .libretro-ctr-static-cmake
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-ctr

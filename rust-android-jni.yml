@@ -1,0 +1,46 @@
+.libretro-rust-android-jni:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-rust
+  stage: build-shared
+  variables:
+    LIBNAME: ${CORENAME}_libretro_android.so
+    STRIP: $NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip
+    STRIP_CORE_LIB: 1
+  script:
+    - cargo ndk -t $ANDROID_ABI -o ./target build --release
+  after_script:
+    - mv ${TARGET_DIR}/lib${CORENAME}.so $LIBNAME
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then $STRIP $LIBNAME; fi
+  artifacts:
+    name: android-$ANDROID_ABI
+    paths:
+      - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-rust-android-jni-armeabi-v7a:
+  extends: .libretro-rust-android-jni
+  variables:
+    ANDROID_ABI: armeabi-v7a
+    TARGET_DIR: ./target/$ANDROID_ABI
+
+.libretro-rust-android-jni-arm64-v8a:
+  extends: .libretro-rust-android-jni
+  variables:
+    ANDROID_ABI: arm64-v8a
+    TARGET_DIR: ./target/$ANDROID_ABI
+
+.libretro-rust-android-jni-x86:
+  extends: .libretro-rust-android-jni
+  variables:
+    ANDROID_ABI: i686-linux-android
+    TARGET_DIR: ./target/$ANDROID_ABI/release
+
+.libretro-rust-android-jni-x86_64:
+  extends: .libretro-rust-android-jni
+  variables:
+    ANDROID_ABI: x86_64-linux-android
+    TARGET_DIR: ./target/$ANDROID_ABI/release
+
+
+
+

@@ -1,0 +1,27 @@
+.libretro-dingux-arm32:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-dingux:latest
+  stage: build-shared
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+    STRIP_CORE_LIB: 1
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.so
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-miyoo-arm32-make-default:
+  extends: .libretro-dingux-arm32
+  variables:
+    platform: miyoo
+    CC:       /opt/miyoo/usr/bin/arm-linux-gcc
+    CXX:      /opt/miyoo/usr/bin/arm-linux-g++
+    STRIP:    /opt/miyoo/usr/bin/arm-linux-strip
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC}
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro.so ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro.so ${CORENAME}_libretro.so; fi
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then $STRIP --strip-unneeded ${CORENAME}_libretro.so; fi

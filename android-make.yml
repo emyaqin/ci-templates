@@ -1,0 +1,46 @@
+.libretro-android-make:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-android:latest
+  stage: build-shared
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+    STRIP_CORE_LIB: 1
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+    - export ANDROID_NDK_ROOT="${NDK_ROOT}"
+    - export ANDROID_NDK_LLVM="${NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64"
+    - export ANDROID_NDK_ARM="${NDK_ROOT}/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64"
+    - export ANDROID_NDK_ARM64="${NDK_ROOT}/toolchains/aarch64-linux-android-4.9/prebuilt/linux-x86_64"
+    - export ANDROID_NDK_X86="${NDK_ROOT}/toolchains/x86-4.9/prebuilt/linux-x86_64"
+    - export ANDROID_NDK_X64="${NDK_ROOT}/toolchains/x86_64-4.9/prebuilt/linux-x86_64"
+    - export ANDROID_NDK_CLANG="${NDK_ROOT}/toolchains/llvm/prebuilt/linux-x86_64"
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC} platform=${ANDROID_PLATFORM}
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro_android.so ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro_android.so ${CORENAME}_libretro_android.so; fi
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then ${ANDROID_NDK_LLVM}/bin/llvm-strip ${CORENAME}_libretro_android.so; fi
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_android.so
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-android-make-armeabi-v7a:
+  extends: .libretro-android-make
+  variables:
+    ANDROID_PLATFORM: android-arm
+
+.libretro-android-make-arm64-v8a:
+  extends: .libretro-android-make
+  variables:
+    ANDROID_PLATFORM: android-arm64
+
+.libretro-android-make-x86:
+  extends: .libretro-android-make
+  variables:
+    ANDROID_PLATFORM: android-x86
+
+.libretro-android-make-x86_64:
+  extends: .libretro-android-make
+  variables:
+    ANDROID_PLATFORM: android-x86_64

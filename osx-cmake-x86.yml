@@ -1,0 +1,15 @@
+include:
+  - local: 'osx-cmake-base.yml'
+
+.libretro-osx-cmake-x86:
+  extends: .libretro-osx-cmake
+  variables:
+    ARCH: x86
+    CMAKE: cmake
+
+.libretro-osx-cmake-x86_64:
+  extends: .libretro-osx-cmake
+  variables:
+    MACOSX_DEPLOYMENT_TARGET: "10.9"
+    ARCH: x86_64
+    CMAKE: cmake

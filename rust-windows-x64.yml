@@ -1,0 +1,21 @@
+.libretro-rust-windows-x64:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-rust
+  stage: build-shared
+  variables:
+    STRIP: strip
+    STRIP_CORE_LIB: 1
+  script:
+    - cargo build --release --target ${TARGET_ARCH}
+  after_script:
+    - mv target/${TARGET_ARCH}/release/${CORENAME}.dll ${CORENAME}_libretro.dll
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then $STRIP --strip-unneeded ${CORENAME}_libretro.dll; fi
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.dll
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-rust-windows-x64-default:
+  extends: .libretro-rust-windows-x64
+  variables:
+    TARGET_ARCH: x86_64-pc-windows-gnu

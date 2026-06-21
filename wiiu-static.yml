@@ -1,0 +1,33 @@
+.libretro-wiiu-static:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-wiiu:latest
+  stage: build-static
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    # Build the core as a static library
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=wiiu
+    # Once the core is built, stage the static library into the libretro directory
+    - mv ${MAKEFILE_PATH}/${CORENAME}_libretro_wiiu.a retroarch-precompiled/libretro_wiiu.a
+    - cd retroarch-precompiled/
+    # The Wii U makefile will compile the RetroArch binary and link it against libretro_wiiu.a
+    - make -f Makefile.wiiu -j$NUMPROC LIBRETRO=${CORENAME}
+    - mv retroarch_wiiu.rpx ../${CORENAME}_libretro.rpx
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.rpx
+    expire_in: 10 min
+
+.libretro-wiiu-static-retroarch-master:
+  extends: .libretro-wiiu-static
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-wiiu

@@ -1,0 +1,31 @@
+.libretro-ps2-static-cmake:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-ps2:latest
+  stage: build-static
+  variables:
+    BUILD_DIR: build/ps2
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - cmake $CORE_ARGS "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DLIBRETRO_STATIC=ON -DLIBRETRO_SUFFIX=_ps2 -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="-DPS2 -DUSE_RGB565 -G0" -DCMAKE_CXX_FLAGS="-DPS2 -DUSE_RGB565 -G0" -DCMAKE_TOOLCHAIN_FILE=/usr/local/ps2dev/ps2sdk/ps2dev.cmake -DPS2=ON
+    - cmake --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+    - mv $BUILD_DIR/$EXTRA_PATH/${CORENAME}_libretro_ps2.a retroarch-precompiled/libretro_ps2.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.ps2 release -j$NUMPROC
+    - mv retroarchps2.elf ../${CORENAME}_libretro_ps2.elf
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_ps2.elf
+    expire_in: 10 min
+
+.libretro-ps2-static-cmake-retroarch-master:
+  extends: .libretro-ps2-static-cmake
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-ps2

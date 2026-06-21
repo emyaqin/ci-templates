@@ -1,0 +1,25 @@
+.libretro-ios9:
+  stage: build-shared
+  tags:
+   - macosx
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$((1 + $(sysctl -n hw.ncpu)/5))
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_ios.dylib
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-ios9-make-default:
+  extends: .libretro-ios9
+  variables:
+    platform: ios9
+    CC:       clang
+    CXX:      clang++
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC} platform=ios9
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro_ios.dylib ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro_ios.dylib ${CORENAME}_libretro_ios.dylib; fi

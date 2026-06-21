@@ -1,0 +1,40 @@
+.libretro-windows-cmake:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-mxe-win-cross-cores:gcc11
+  stage: build-shared
+  variables:
+    LIBNAME: ${CORENAME}_libretro.dll
+    BUILD_DIR: build/windows-$ARCH
+    CMAKE: cmake
+    STRIP_CORE_LIB: 1
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+    # If ccache is installed, ensure that we run it
+    # once before starting the build process in order
+    # to generate the default config file.
+    # This should avoid errors of the type:
+    #    ccache: error: .../ccache.conf: No such file or directory
+    # if the build process runs ccache in parallel.
+    - if builtin type -P ccache &> /dev/null; then ccache -V &> /dev/null; fi
+  script:
+    - ${CMAKE} -DCMAKE_BUILD_TYPE=Release $CORE_ARGS "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR
+    - ${CMAKE} --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+    - mv $BUILD_DIR/$EXTRA_PATH/$LIBNAME $LIBNAME
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then strip --strip-unneeded $LIBNAME; fi
+  artifacts:
+    paths:
+      - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-windows-cmake-x86:
+  extends: .libretro-windows-cmake
+  variables:
+    ARCH: x86
+    CMAKE: i686-w64-mingw32.static-cmake
+
+.libretro-windows-cmake-x86_64:
+  extends: .libretro-windows-cmake
+  variables:
+    ARCH: x86_64
+    CMAKE: x86_64-w64-mingw32.static-cmake

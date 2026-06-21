@@ -1,0 +1,33 @@
+.libretro-libnx-static-cmake:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-libnx-devkitpro:v4-10-0
+  stage: build-static
+  variables:
+    BUILD_DIR: build/libnx
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - cmake $CORE_ARGS "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DLIBRETRO_STATIC=ON -DLIBRETRO_SUFFIX=_libnx -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/Switch.cmake -DNSWITCH=ON -DCFLAGS=-DHAVE_LIBNX=1 -DCXXFLAGS=-DHAVE_LIBNX=1
+    - cmake --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+    - mv $BUILD_DIR/$EXTRA_PATH/${CORENAME}_libretro_libnx.a retroarch-precompiled/libretro_libnx.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.libnx -j10
+    - mv retroarch_switch.nro ../${CORENAME}_libretro_libnx.nro
+    - mv retroarch_switch.elf ../${CORENAME}_libretro_libnx.elf
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_libnx.nro
+    - ${CORENAME}_libretro_libnx.elf
+    expire_in: 10 min
+
+.libretro-libnx-static-cmake-retroarch-master:
+  extends: .libretro-libnx-static-cmake
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-libnx-aarch64

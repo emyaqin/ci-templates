@@ -1,0 +1,30 @@
+.libretro-psp-static:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-psp:latest
+  stage: build-static
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=psp1
+    - mv ${MAKEFILE_PATH}/${CORENAME}_libretro_psp1.a retroarch-precompiled/libretro_psp1.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.psp1 -j$NUMPROC
+    - mv EBOOT.PBP ../${CORENAME}_libretro_psp.PBP
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_psp.PBP
+    expire_in: 10 min
+
+.libretro-psp-static-retroarch-master:
+  extends: .libretro-psp-static
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-psp

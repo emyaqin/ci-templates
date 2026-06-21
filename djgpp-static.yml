@@ -1,0 +1,31 @@
+.libretro-djgpp-static:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-djgpp-build-container:latest
+  stage: build-static
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=dos
+    - mv ${MAKEFILE_PATH}/${CORENAME}_libretro_dos.a retroarch-precompiled/libretro_dos.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.dos -j10
+    - i586-pc-msdosdjgpp-strip retrodos.exe
+    - mv retrodos.exe ../${CORENAME}_libretro_dos.exe
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_dos.exe
+    expire_in: 10 min
+
+.libretro-djgpp-static-retroarch-master:
+  extends: .libretro-djgpp-static
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-djgpp

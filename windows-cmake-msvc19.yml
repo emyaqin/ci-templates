@@ -1,0 +1,45 @@
+.libretro-windows-msvc19-cmake:
+  tags:
+    - msvc2019
+  stage: build-shared
+  variables:
+    MSVC2019_TOOLS_DIR: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools
+    MSVC2019_CMAKE_DIR: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin
+    BUILD_DIR: build\windows-$ARCH
+    LIBNAME: ${CORENAME}_libretro.dll
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - $Env:Path += -join(";", "$Env:MSVC2019_TOOLS_DIR")
+    - $Script:VsDevConfigCmd = "VsDevCmd.bat -arch=$Env:VSDEV_ARCH"
+    - Invoke-Expression $Script:VsDevConfigCmd
+  script:
+   - |
+     $ErrorActionPreference = 'Stop'
+     $Env:Path += -join(";", "$Env:MSVC2019_CMAKE_DIR")
+     $Script:CmakeConfigArgs = -join("$Env:CORE_ARGS", " ", "$Env:CMAKE_SOURCE_ROOT", " ", "-B$Env:BUILD_DIR", " ", "-DCMAKE_BUILD_TYPE=Release")
+     $Script:CmakeBuildArgs = -join("--build", " ", "$Env:BUILD_DIR", " ", "--target", " ", -join("$Env:CORENAME", "_libretro"), " ", "--config", " ", "Release")
+     cmake.exe -G "Visual Studio 16 2019" -A "$Env:CMAKE_ARCH" $($Script:CmakeConfigArgs -replace '\s+', ' ').split()
+     if ($LastExitCode -ne 0){throw "CMake configuration failed"}
+     cmake.exe $($Script:CmakeBuildArgs -replace '\s+', ' ').split()
+     if ($LastExitCode -ne 0){throw "CMake build failed"}
+  after_script:
+    - move-Item "$Env:BUILD_DIR\$Env:EXTRA_PATH\$Env:LIBNAME" "$Env:LIBNAME" -Force -ErrorAction SilentlyContinue
+  artifacts:
+    paths:
+      - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-windows-msvc19-cmake-x86:
+  extends: .libretro-windows-msvc19-cmake
+  variables:
+    ARCH: x86
+    VSDEV_ARCH: x86
+    CMAKE_ARCH: Win32
+
+.libretro-windows-msvc19-cmake-x86_64:
+  extends: .libretro-windows-msvc19-cmake
+  variables:
+    ARCH:       x86_64
+    VSDEV_ARCH: amd64
+    CMAKE_ARCH: x64

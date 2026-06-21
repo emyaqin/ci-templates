@@ -1,0 +1,32 @@
+.libretro-ctr-static:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-devkitpro:latest
+  stage: build-static
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=ctr
+    - mv ${MAKEFILE_PATH}/${CORENAME}_libretro_ctr.a retroarch-precompiled/libretro_ctr.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.ctr -j$NUMPROC USE_CTRULIB_2=1 LIBRETRO=${CORENAME}
+    - mv retroarch_3ds.cia ../${CORENAME}_libretro.cia
+    - mv retroarch_3ds.3dsx ../${CORENAME}_libretro.3dsx
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.cia
+    - ${CORENAME}_libretro.3dsx
+    expire_in: 10 min
+
+.libretro-ctr-static-retroarch-master:
+  extends: .libretro-ctr-static
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-ctr

@@ -1,0 +1,34 @@
+.libretro-rust-osx-base:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-rust
+  stage: build-shared
+  variables:
+    STRIP: strip
+    STRIP_CORE_LIB: 1
+  script:
+    - cargo build --release --target ${TARGET_ARCH}
+  after_script:
+    - mv target/${TARGET_ARCH}/release/lib${CORENAME}.dylib ${CORENAME}_libretro.dylib
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then $STRIP --strip-unneeded ${CORENAME}_libretro.dylib; fi
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.dylib
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-rust-osx-arm64-default:
+  extends: .libretro-rust-osx-base
+  variables:
+    TARGET_ARCH: aarch64-apple-darwin
+  before_script:
+    - export STRIP=$AARCH64_DARWIN_STRIP
+    - export CC=$AARCH64_OSX_CC
+    - export CXX=$AARCH64_OSX_CXX
+
+.libretro-rust-osx-x86_64-default:
+  extends: .libretro-rust-osx-base
+  variables:
+    TARGET_ARCH: x86_64-apple-darwin
+  before_script:
+    - export STRIP=$X86_64_DARWIN_STRIP
+    - export CC=$X86_64_OSX_CC
+    - export CXX=$X86_64_OSX_CXX

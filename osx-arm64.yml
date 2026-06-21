@@ -1,0 +1,33 @@
+.libretro-osx-arm64:
+  stage: build-shared
+  tags:
+   - mac-apple-silicon
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$((1 + $(sysctl -n hw.ncpu)/5))
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.dylib
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-osx-arm64-make-default:
+  extends: .libretro-osx-arm64
+  variables:
+    platform: osx
+    arch:     arm
+    CC:       clang
+    CXX:      clang++
+    CROSS_COMPILE: 1
+    LIBRETRO_APPLE_PLATFORM: arm64-apple-macos10.15
+  script:
+    - export LIBRETRO_APPLE_ISYSROOT=$(xcodebuild -version -sdk macosx Path)
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC}
+    - if [ ! -f ${CORENAME}_libretro.dylib ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro.dylib ${CORENAME}_libretro.dylib; fi
+    - otool -L "${CORENAME}_libretro.dylib" || true
+    - lipo -info ${CORENAME}_libretro.dylib
+    - if [ x"$(lipo -info ${CORENAME}_libretro.dylib | grep arm64)" = x ]; then echo wrong arch; exit 1; fi
+    # cleanup, but not for projects with a cache; basing this off corename is a workaround for not being able to ask/know if a core uses a cache
+    - if [ "${CORENAME}" != "mame" -a "${CORENAME}" != "same_cdi" ] ; then mv ${CORENAME}_libretro.dylib $TMPDIR ; git clean -dxf ; mv $TMPDIR/${CORENAME}_libretro.dylib . ; fi

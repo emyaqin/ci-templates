@@ -1,0 +1,24 @@
+.libretro-webos-cmake:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-webos:latest
+  stage: build-shared
+  variables:
+    LIBNAME: ${CORENAME}_libretro.so
+    BUILD_DIR: build/webos-armv7a
+    STRIP_CORE_LIB: 1
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+    - . /developer/arm-webos-linux-gnueabi_sdk-buildroot/environment-setup
+  script:
+    - /usr/bin/cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN_FILE $CORE_ARGS "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR
+    - /usr/bin/cmake --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+    - mv $BUILD_DIR/$EXTRA_PATH/$LIBNAME $LIBNAME
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then arm-webos-linux-gnueabi-strip --strip-unneeded $LIBNAME; fi
+  artifacts:
+    paths:
+      - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-webos-armv7a-cmake:
+  extends: .libretro-webos-cmake

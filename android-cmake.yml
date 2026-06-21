@@ -1,0 +1,44 @@
+.libretro-android-cmake:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-android:latest
+  stage: build-shared
+  variables:
+    API_LEVEL: 16
+    LIBNAME: ${CORENAME}_libretro_android.so
+    BUILD_DIR: build/android-$ANDROID_ABI
+    STRIP_CORE_LIB: 1
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  script:
+    - cmake -DCMAKE_BUILD_TYPE=Release $CORE_ARGS -DANDROID_PLATFORM=android-$API_LEVEL -DCMAKE_TOOLCHAIN_FILE=$NDK_ROOT/build/cmake/android.toolchain.cmake -DANDROID_STL=c++_static -DANDROID_ABI=$ANDROID_ABI "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR
+    - cmake --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+  after_script:
+    - if [ ! -f "$BUILD_DIR/$EXTRA_PATH/$LIBNAME" -a -f "$BUILD_DIR/$EXTRA_PATH/${CORENAME}_libretro.so" ] ; then mv "$BUILD_DIR/$EXTRA_PATH/${CORENAME}_libretro.so" "$BUILD_DIR/$EXTRA_PATH/$LIBNAME" ; fi
+    - mv $BUILD_DIR/$EXTRA_PATH/$LIBNAME $LIBNAME
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then $NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip $LIBNAME; fi
+  artifacts:
+    name: android-$ANDROID_ABI
+    paths:
+      - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-android-cmake-armeabi-v7a:
+  extends: .libretro-android-cmake
+  variables:
+    ANDROID_ABI: armeabi-v7a
+
+.libretro-android-cmake-arm64-v8a:
+  extends: .libretro-android-cmake
+  variables:
+    ANDROID_ABI: arm64-v8a
+
+.libretro-android-cmake-x86:
+  extends: .libretro-android-cmake
+  variables:
+    ANDROID_ABI: x86
+
+.libretro-android-cmake-x86_64:
+  extends: .libretro-android-cmake
+  variables:
+    ANDROID_ABI: x86_64

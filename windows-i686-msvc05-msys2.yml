@@ -1,0 +1,38 @@
+.libretro-windows-i686-msvc05-msys2:
+  tags:
+    - win10
+  stage: build-shared
+  variables:
+    MSYS_BIN_DIR: C:\msys64\usr\bin
+    VS80COMNTOOLS: C:\Program Files (x86)\Microsoft Visual Studio 8\Common7\Tools\
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+    LIBNAME: ${CORENAME}_libretro.dll
+  artifacts:
+    paths:
+    - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-windows-i686-msvc05-msys2-make-default:
+  extends: .libretro-windows-i686-msvc05-msys2
+  variables:
+    MSYSTEM:  MINGW32
+    platform: windows_msvc2005_x86
+    ARCH:     x86
+    MAKE:     make.exe
+    AR:       ar
+    AS:       as
+    CC:       cl.exe
+    CXX:      cl.exe
+    LD:       link.exe
+    WINDRES:  windres
+  script:
+   - |
+     $ErrorActionPreference = 'Stop'
+     $Env:Path += -join(";", "$Env:MSYS_BIN_DIR")
+     $Env:HOME = "."
+     bash.exe -e -l -c "make -C $Env:MAKEFILE_PATH -f $Env:MAKEFILE"
+     if ($LastExitCode -ne 0){throw "Build failed: make -C $Env:MAKEFILE_PATH -f $Env:MAKEFILE"}
+  after_script:
+    - move-Item "$Env:MAKEFILE_PATH/$Env:LIBNAME" "$Env:LIBNAME" -Force -ErrorAction SilentlyContinue

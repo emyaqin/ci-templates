@@ -1,0 +1,75 @@
+.libretro-rust-apple-base:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-rust
+  stage: build-shared
+  variables:
+    DSYM_CORE_LIB: 0
+  script:
+    - if [ "$DSYM_CORE_LIB" -eq 1 ]; then export CARGO_PROFILE_RELEASE_DEBUG=true; fi
+    - cargo build --release --target ${TARGET_ARCH}
+    - mv target/${TARGET_ARCH}/release/lib${CORENAME}.dylib ${CORENAME}_libretro.dylib
+    - if [ "$DSYM_CORE_LIB" -eq 1 ]; then dsymutil-18 ${CORENAME}_libretro.dylib -o ${CORENAME}_libretro.dylib.dSYM; fi
+    - if [ "$STRIP_CORE_LIB" -eq 1 ]; then $STRIP -S ${CORENAME}_libretro.dylib; fi
+    - if [ "$DSYM_CORE_LIB" -eq 1 ]; then zip -r ${CORENAME}_libretro.dylib.dSYM.zip ${CORENAME}_libretro.dylib.dSYM; fi
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.dylib
+    - ${CORENAME}_libretro.dylib.dSYM.zip
+    expire_in: 10 min
+    when: always
+  dependencies: []
+
+.libretro-rust-apple-osx-base:
+  extends: .libretro-rust-apple-base
+  variables:
+    STRIP_CORE_LIB: 1
+  before_script:
+    - export SDKROOT=$OSX_SDKROOT
+
+.libretro-rust-osx-arm64-default:
+  extends: .libretro-rust-apple-osx-base
+  variables:
+    TARGET_ARCH: aarch64-apple-darwin
+  before_script:
+    - export STRIP=$AARCH64_DARWIN_STRIP
+    - export CC=$AARCH64_OSX_CC
+    - export CXX=$AARCH64_OSX_CXX
+
+.libretro-rust-osx-x86_64-default:
+  extends: .libretro-rust-apple-osx-base
+  variables:
+    TARGET_ARCH: x86_64-apple-darwin
+  before_script:
+    - export STRIP=$X86_64_DARWIN_STRIP
+    - export CC=$X86_64_OSX_CC
+    - export CXX=$X86_64_OSX_CXX
+
+.libretro-rust-ios-arm64-default:
+  extends: .libretro-rust-apple-base
+  before_script:
+    - export SDKROOT=$IOS_SDKROOT
+    - export LD_LIBRARY_PATH=$IOS_LD_LIBRARY_PATH
+    - export STRIP=$IOS_STRIP
+  variables:
+    TARGET_ARCH: aarch64-apple-ios
+    IPHONEOS_DEPLOYMENT_TARGET: "12.0"
+    STRIP_CORE_LIB: 1
+    DSYM_CORE_LIB: 1
+
+.libretro-rust-tvos-arm64-default:
+  extends: .libretro-rust-apple-base
+  variables:
+    TARGET_ARCH: aarch64-apple-tvos
+    TVOS_DEPLOYMENT_TARGET: "11.0"
+    STRIP_CORE_LIB: 1
+    DSYM_CORE_LIB: 1
+  before_script:
+    - export SDKROOT=$TVOS_SDKROOT
+    - export LD_LIBRARY_PATH=$TVOS_LD_LIBRARY_PATH
+    - export STRIP=$TVOS_STRIP
+  script:
+    - if [ "$DSYM_CORE_LIB" -eq 1 ]; then export CARGO_PROFILE_RELEASE_DEBUG=true; fi
+    - cargo +nightly build -Zbuild-std --target aarch64-apple-tvos --release
+    - mv target/aarch64-apple-tvos/release/lib${CORENAME}.dylib ${CORENAME}_libretro.dylib
+    - if [ "$DSYM_CORE_LIB" -eq 1 ]; then dsymutil-18 ${CORENAME}_libretro.dylib -o ${CORENAME}_libretro.dylib.dSYM; fi
+    - if [ "$STRIP_CORE_LIB" -eq 1 ]; then $STRIP -S ${CORENAME}_libretro.dylib; fi
+    - if [ "$DSYM_CORE_LIB" -eq 1 ]; then zip -r ${CORENAME}_libretro.dylib.dSYM.zip ${CORENAME}_libretro.dylib.dSYM; fi

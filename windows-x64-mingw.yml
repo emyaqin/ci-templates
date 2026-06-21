@@ -1,0 +1,31 @@
+.libretro-windows-x64-mingw:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-mxe-win-cross-cores:gcc11
+  stage: build-shared
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+    STRIP_CORE_LIB: 1
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.dll
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-windows-x64-mingw-make-default:
+  extends: .libretro-windows-x64-mingw
+  variables:
+    platform: win64
+    ARCH:     x86_64
+    MSYSTEM:  MINGW64
+    AR:       x86_64-w64-mingw32.static-ar
+    AS:       x86_64-w64-mingw32.static-as
+    CC:       x86_64-w64-mingw32.static-gcc
+    CXX:      x86_64-w64-mingw32.static-g++
+    WINDRES:  x86_64-w64-mingw32.static-windres
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC}
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro.dll ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro.dll ${CORENAME}_libretro.dll; fi
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then strip --strip-unneeded ${CORENAME}_libretro.dll; fi

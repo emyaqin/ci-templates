@@ -1,0 +1,31 @@
+.libretro-orbis-static-cmake:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-orbis:latest
+  stage: build-static
+  variables:
+    BUILD_DIR: build/orbis
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - cmake $CORE_ARGS "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DLIBRETRO_STATIC=ON -DLIBRETRO_SUFFIX=_orbis -DCMAKE_TOOLCHAIN_FILE=${orbisSDK}/share/orbis.toolchain.cmake
+    - cmake --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+    - mv $BUILD_DIR/$EXTRA_PATH/${CORENAME}_libretro_orbis.a retroarch-precompiled/libretro_orbis.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.orbis -j$NUMPROC
+    - mv retroarch_orbis.self ../${CORENAME}_libretro_orbis.self
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_orbis.elf
+    expire_in: 10 min
+
+.libretro-orbis-static-cmake-retroarch-master:
+  extends: .libretro-orbis-static-cmake
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-orbis

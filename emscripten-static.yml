@@ -1,0 +1,40 @@
+.libretro-emscripten-static:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-emscripten:latest
+  stage: build-static
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+    EM_CACHE: "$CI_PROJECT_DIR/.cache/emscripten"
+    EM_MEMORY: 134217728
+    AR: emar
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+    - mkdir -p "$CI_PROJECT_DIR/.cache/emscripten"
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - emmake make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=emscripten MEMORY=${EM_MEMORY}
+    - mv ${MAKEFILE_PATH}/${CORENAME}_libretro_emscripten.bc retroarch-precompiled/libretro_emscripten.bc
+    - cd retroarch-precompiled/
+    - emmake make -f Makefile.emscripten -j$NUMPROC LIBRETRO=${CORENAME} MEMORY=${EM_MEMORY}
+    - mv ${CORENAME}_libretro.wasm ../
+    - mv ${CORENAME}_libretro.js ../
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.wasm
+    - ${CORENAME}_libretro.js
+    expire_in: 10 min
+  cache:
+    key: "$CI_COMMIT_REF_SLUG-emscripten"
+    paths:
+      - "$CI_PROJECT_DIR/.cache/emscripten"
+
+.libretro-emscripten-static-retroarch-master:
+  extends: .libretro-emscripten-static
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-emscripten

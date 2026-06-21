@@ -1,0 +1,38 @@
+.libretro-webos-armv7a:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-webos:latest
+  stage: build-shared
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+    STRIP_CORE_LIB: 1
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+    - . /developer/arm-webos-linux-gnueabi_sdk-buildroot/environment-setup
+    - export CC_FOR_BUILD=/usr/bin/gcc CXX_FOR_BUILD=/usr/bin/g++
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.so
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-webos-armv7a-make-default:
+  extends: .libretro-webos-armv7a
+  variables:
+    platform: unix
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC}
+  after_script:
+    - . /developer/arm-webos-linux-gnueabi_sdk-buildroot/environment-setup
+    - if [ ! -f ${CORENAME}_libretro.so ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro.so ${CORENAME}_libretro.so; fi
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then arm-webos-linux-gnueabi-strip --strip-unneeded ${CORENAME}_libretro.so; fi
+
+.libretro-webos-armv7a-make-platform-webos:
+  extends: .libretro-webos-armv7a
+  variables:
+    platform: webos
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC}
+  after_script:
+    - . /developer/arm-webos-linux-gnueabi_sdk-buildroot/environment-setup
+    - if [ ! -f ${CORENAME}_libretro.so ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro.so ${CORENAME}_libretro.so; fi
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then arm-webos-linux-gnueabi-strip --strip-unneeded ${CORENAME}_libretro.so; fi

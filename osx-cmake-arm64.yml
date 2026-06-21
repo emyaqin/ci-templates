@@ -1,0 +1,15 @@
+include:
+  - local: 'osx-cmake-base.yml'
+
+.libretro-osx-cmake-arm64:
+  extends: .libretro-osx-cmake
+  tags:
+    - mac-apple-silicon
+  variables:
+    ARCH: arm64
+    CMAKE_APPLE_SILICON_PROCESSOR: arm64
+    CMAKE: cmake
+    MACOSX_DEPLOYMENT_TARGET: "10.15"
+    CC: clang
+    CXX: clang++
+    CMAKE_OSX_EXTRA: -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_APPLE_SILICON_PROCESSOR=arm64  -DCMAKE_SYSTEM_PROCESSOR=arm64

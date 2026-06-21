@@ -1,0 +1,43 @@
+.libretro-windows-x64-msvc19-msys2:
+  tags:
+    - msvc2019
+  stage: build-shared
+  variables:
+    MSVC2019_TOOLS_DIR: C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools
+    MSYS_BIN_DIR: C:\msys64\usr\bin
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+    LIBNAME: ${CORENAME}_libretro.dll
+  before_script:
+    - $Env:Path += -join(";", "$Env:MSVC2019_TOOLS_DIR")
+    - $Script:VsDevConfigCmd = "VsDevCmd.bat -arch=$Env:VSDEV_ARCH"
+    - Invoke-Expression $Script:VsDevConfigCmd
+  artifacts:
+    paths:
+    - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-windows-x64-msvc19-msys2-make-default:
+  extends: .libretro-windows-x64-msvc19-msys2
+  variables:
+    MSYSTEM:    MINGW64
+    platform:   windows_msvc2019_desktop_x64
+    ARCH:       x86_64
+    VSDEV_ARCH: amd64
+    MAKE:       make.exe
+    AR:         ar
+    AS:         as
+    CC:         cl.exe
+    CXX:        cl.exe
+    LD:         link.exe
+    WINDRES:    windres
+  script:
+   - |
+     $ErrorActionPreference = 'Stop'
+     $Env:Path += -join(";", "$Env:MSYS_BIN_DIR")
+     $Env:HOME = "."
+     bash.exe -e -l -c "make -C $Env:MAKEFILE_PATH -f $Env:MAKEFILE"
+     if ($LastExitCode -ne 0){throw "Build failed: make -C $Env:MAKEFILE_PATH -f $Env:MAKEFILE"}
+  after_script:
+    - move-Item "$Env:MAKEFILE_PATH/$Env:LIBNAME" "$Env:LIBNAME" -Force -ErrorAction SilentlyContinue

@@ -1,0 +1,23 @@
+.libretro-rust-ios-base:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-rust
+  stage: build-shared
+  script:
+    - cargo build --release --target ${TARGET_ARCH}
+  after_script:
+    - mv target/${TARGET_ARCH}/release/lib${CORENAME}.dylib ${CORENAME}_libretro.dylib
+    - if [ "$STRIP_CORE_LIB" -eq 1 ]; then $STRIP ${CORENAME}_libretro.dylib; fi
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.dylib
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-rust-ios-arm64-default:
+  extends: .libretro-rust-ios-base
+  before_script:
+    - export SDKROOT=$IOS_SDKROOT
+    - export LD_LIBRARY_PATH=$IOS_LD_LIBRARY_PATH
+    - export STRIP=$IOS_STRIP
+  variables:
+    TARGET_ARCH: aarch64-apple-ios
+    IPHONEOS_DEPLOYMENT_TARGET: "12.0"

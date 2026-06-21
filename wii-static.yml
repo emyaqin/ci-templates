@@ -1,0 +1,30 @@
+.libretro-wii-static:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-devkitpro:latest
+  stage: build-static
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  needs:
+    - project: libretro/RetroArch
+      job: ${STATIC_RETROARCH_JOB_NAME}
+      ref: ${STATIC_RETROARCH_BRANCH}
+      artifacts: true
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j$NUMPROC platform=wii
+    - mv ${MAKEFILE_PATH}/${CORENAME}_libretro_wii.a retroarch-precompiled/libretro_wii.a
+    - cd retroarch-precompiled/
+    - make -f Makefile.wii -j$NUMPROC EXTERNAL_LIBOGC=1 GX_PTHREAD_LEGACY=0 LIBRETRO=${CORENAME}
+    - mv retroarch_wii.dol ../${CORENAME}_libretro_wii.dol
+    - cd ../
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_wii.dol
+    expire_in: 10 min
+
+.libretro-wii-static-retroarch-master:
+  extends: .libretro-wii-static
+  variables:
+    STATIC_RETROARCH_BRANCH: master
+    STATIC_RETROARCH_JOB_NAME: build-static-retroarch-wii

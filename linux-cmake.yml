@@ -1,0 +1,46 @@
+.libretro-linux-cmake:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-amd64-ubuntu:xenial-gcc9
+  stage: build-shared
+  variables:
+    LIBNAME: ${CORENAME}_libretro.so
+    BUILD_DIR: build/linux-$ARCH
+    STRIP_CORE_LIB: 1
+    CMAKE_SOURCE_ROOT: .
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+    # If ccache is installed, ensure that we run it
+    # once before starting the build process in order
+    # to generate the default config file.
+    # This should avoid errors of the type:
+    #    ccache: error: .../ccache.conf: No such file or directory
+    # if the build process runs ccache in parallel.
+    - if builtin type -P ccache &> /dev/null; then ccache -V &> /dev/null; fi
+  script:
+    - cmake -DCMAKE_BUILD_TYPE=Release $CORE_ARGS "$CMAKE_SOURCE_ROOT" -B$BUILD_DIR
+    - cmake --build $BUILD_DIR --target ${CORENAME}_libretro --config Release -- -j $NUMPROC
+    - mv $BUILD_DIR/$EXTRA_PATH/$LIBNAME $LIBNAME
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then strip --strip-unneeded $LIBNAME; fi
+  artifacts:
+    paths:
+      - $LIBNAME
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-linux-cmake-x86:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-i386-ubuntu:xenial-gcc9
+  extends: .libretro-linux-cmake
+  variables:
+    ARCH: x86
+
+.libretro-linux-cmake-x86_64:
+  extends: .libretro-linux-cmake
+  variables:
+    ARCH: x86_64
+
+.libretro-linux-cmake-aarch64:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-aarch64-ubuntu:latest
+  extends: .libretro-linux-cmake
+  tags:
+    - aarch64
+  variables:
+    ARCH: aarch64

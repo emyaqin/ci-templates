@@ -1,0 +1,28 @@
+.libretro-linux-aarch64:
+  image: $CI_SERVER_HOST:5050/libretro-infrastructure/libretro-build-aarch64-ubuntu:latest
+  stage: build-shared
+  tags:
+    - aarch64
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+    STRIP_CORE_LIB: 1
+  before_script:
+    - export NUMPROC=$(($(nproc)/5))
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro.so
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-linux-aarch64-make-default:
+  extends: .libretro-linux-aarch64
+  variables:
+    platform: unix
+    CC:       gcc
+    CXX:      g++
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC}
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro.so ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro.so ${CORENAME}_libretro.so; fi
+    - if [ $STRIP_CORE_LIB -eq 1 ]; then strip --strip-unneeded ${CORENAME}_libretro.so; fi

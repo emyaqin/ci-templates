@@ -1,0 +1,29 @@
+.libretro-tvos-arm64:
+  stage: build-shared
+  tags:
+   - mac-apple-silicon
+  variables:
+    MAKEFILE: Makefile
+    MAKEFILE_PATH: .
+  before_script:
+    - export NUMPROC=$((1 + $(sysctl -n hw.ncpu)/5))
+  artifacts:
+    paths:
+    - ${CORENAME}_libretro_tvos.dylib
+    expire_in: 10 min
+  dependencies: []
+
+.libretro-tvos-arm64-make-default:
+  extends: .libretro-tvos-arm64
+  variables:
+    platform: tvos-arm64
+    CC:       clang
+    CXX:      clang++
+  script:
+    - make -C ${MAKEFILE_PATH} -f ${MAKEFILE} -j${NUMPROC} platform=tvos-arm64
+  after_script:
+    - if [ ! -f ${CORENAME}_libretro_tvos.dylib ]; then mv ${MAKEFILE_PATH}/${CORENAME}_libretro_tvos.dylib ${CORENAME}_libretro_tvos.dylib; fi
+    # cleanup, but not for projects with a cache; basing this off corename is a workaround for not being able to ask/know if a core uses a cache
+    - if [ "${CORENAME}" != "mame" -a "${CORENAME}" != "same_cdi" ] ; then mv ${CORENAME}_libretro_tvos.dylib $TMPDIR ; git clean -dxf ; mv $TMPDIR/${CORENAME}_libretro_tvos.dylib . ; fi
+    - vtool -show "${CORENAME}_libretro_tvos.dylib" || true
+    - if [ x"$(vtool -show ${CORENAME}_libretro_tvos.dylib | grep TVOS)" = x ]; then echo wrong platform; exit 1; fi
